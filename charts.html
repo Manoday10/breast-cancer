@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cancer ASR and Mortality Charts</title>
+    <!-- <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}" -->
+    <!-- /> -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js"
+      integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.0.0/dist/chartjs-chart-geo.umd.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* Existing internal styles */
+      /* Ensure charts fit their containers */
+      .chart-container {
+        position: relative;
+        width: 100%;
+        height: 400px; /* Adjust as needed */
+      }
+
+      /* Optional: Adjust card-body to accommodate charts */
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .chart-container {
+          height: 300px; /* Reduce height on smaller screens */
+        }
+      }
+
+      /* Enhanced Legends */
+      .chart-legend {
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      /* Shadow and Hover Effects for Charts */
+      .chart-card {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      .chart-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      }
+
+      /* Extracted styles from styles.css */
+
+      /* General Body Styling */
+      body {
+          font-family: 'Arial', sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #f4f4f4;
+          color: #333;
+      }
+
+      /* Container Styling */
+      .container {
+          width: 90%;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 20px;
+      }
+
+      /* Navbar Styling */
+      .navbar {
+          background-color: #2c3e50;  /* Dark background for visibility */
+          color: white;                /* White text color */
+          padding: 15px 0;             /* Top and bottom padding */
+          text-align: center;          /* Center the text */
+          position: sticky;            /* Keep navbar fixed at top */
+          top: 0;                      /* Align to the top */
+          z-index: 1000;               /* Ensure it stays above other content */
+      }
+
+      .navbar h1 {
+          margin: 0;                  /* Remove default margin */
+          font-size: 2em;             /* Font size for the heading */
+      }
+
+      /* Chart Canvas Styling */
+      .chart-canvas {
+          width: 100% !important;
+          height: 600px !important; /* Adjusted height for better visibility */
+          max-height: 500px; /* Optional: Maximum height to prevent excessive scaling */
+      }
+
+      /* Chart Card Hover Effect */
+      .chart-card {
+          transition: transform 0.3s, box-shadow 0.3s; /* Smooth transitions */
+      }
+      
+      .chart-card:hover {
+          transform: translateY(-10px); /* Slight lift on hover */
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); /* Enhanced shadow on hover */
+      }
+
+      /* Flex Grow for Content */
+      .flex-grow-1 {
+          flex-grow: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+      <div class="container-fluid">
+        <img src="{{ url_for('static', filename='images/download2.png') }}" alt="Cancer Detection System Logo" width="40" height="40" class="me-2">
+        <a class="navbar-brand" href="/">Cancer Detection System</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/doctors">Doctors</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/news">Recent Developments</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/charts">Charts</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/upload">Upload Files</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mt-4">
+      <h1 class="my-4 text-center">Stay Updated with Latest Cancer Data</h1>
+
+      <!-- Row for Bar Charts -->
+      <div class="row">
+        <!-- Existing Incidences Chart Column -->
+        <div class="col-md-6 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">Age-Standardized Rate (Incidences)</h2>
+              <canvas id="asrChart" class="chart-canvas flex-grow-1"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- Existing Mortality Chart Column -->
+        <div class="col-md-6 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">Age-Standardized Rate (Mortality)</h2>
+              <canvas
+                id="mortalityChart"
+                class="chart-canvas flex-grow-1"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row for Prevalent Cases Pie Chart -->
+      <div class="row">
+        <div class="col-md-12 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">
+                Estimated Number of Prevalent Cases by Population
+              </h2>
+              <canvas
+                id="prevalentCasesChart"
+                class="chart-canvas flex-grow-1"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row for Cancer Data Pie Chart -->
+      <div class="row">
+        <div class="col-md-12 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">
+                Estimated Number of Prevalent Cases by Cancer
+              </h2>
+              <canvas
+                id="cancerDataChart"
+                class="chart-canvas flex-grow-1"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">
+                Incidence vs Mortality Scatter Plot
+              </h2>
+              <canvas
+                id="scatterPlotChart"
+                class="chart-canvas flex-grow-1"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12 mb-4">
+          <div class="card chart-card h-100">
+            <div class="card-body d-flex flex-column">
+              <h2 class="card-title text-center mb-4">
+                Comparison of ASR (World vs Asia)
+              </h2>
+              <canvas
+                id="comparisonChart"
+                class="chart-canvas flex-grow-1"
+                aria-label="ASR Comparison Chart"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+          window.onload = function() {
+              // Existing ASR Chart Data
+              const chartData = {{ asr_chart_data | tojson }};
+              console.log(chartData);
+
+              const sortedData = chartData.sort((a, b) => parseFloat(b['ASR (World)']) - parseFloat(a['ASR (World)']));
+              const labels = sortedData.map(item => item.Label);
+              const data = sortedData.map(item => parseFloat(item['ASR (World)']));
+
+              const ctx = document.getElementById('asrChart').getContext('2d');
+              new Chart(ctx, {
+                  type: 'bar',
+                  data: {
+                      labels: labels,
+                      datasets: [{
+                          label: 'ASR (World)',
+                          data: data,
+                          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                          borderColor: 'rgba(75, 192, 192, 1)',
+                          borderWidth: 1
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      indexAxis: 'y',
+                      scales: {
+                          x: { beginAtZero: true }
+                      },
+                      plugins: { title: { display: false }, legend: { display: false } }
+                  }
+              });
+
+              // Existing Mortality Chart Data
+              const mortalityData = {{ mortality_data | tojson }};
+              console.log(mortalityData);
+
+              const sortedMortalityData = mortalityData.sort((a, b) => parseFloat(b['ASR (World)']) - parseFloat(a['ASR (World)']));
+              const labelsMortality = sortedMortalityData.map(item => item.Label);
+              const dataMortality = sortedMortalityData.map(item => parseFloat(item['ASR (World)']));
+
+              const ctxMortality = document.getElementById('mortalityChart').getContext('2d');
+              new Chart(ctxMortality, {
+                  type: 'bar',
+                  data: {
+                      labels: labelsMortality,
+                      datasets: [{
+                          label: 'ASR (World)',
+                          data: dataMortality,
+                          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                          borderColor: 'rgba(255, 99, 132, 1)',
+                          borderWidth: 1
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      indexAxis: 'y',
+                      scales: {
+                          x: { beginAtZero: true }
+                      },
+                      plugins: { title: { display: false }, legend: { display: false } }
+                  }
+              });
+
+              // Doughnut Chart Data - Prevalent Cases
+              const pieAllLabels = {{ pie_all_labels | tojson }};
+              const pieAllData = {{ pie_all_data | tojson }};
+              const pieAllColors = {{ pie_all_colors | tojson }};
+              const ctxPieAll = document.getElementById('prevalentCasesChart').getContext('2d');
+
+              // Unique Color Palette for Prevalent Cases Chart (Cool Tones)
+              const prevalentCasesColors = [
+                  'rgba(54, 162, 235, 0.7)',    // Blue
+                  'rgba(75, 192, 192, 0.7)',    // Teal
+                  'rgba(153, 102, 255, 0.7)',   // Purple
+                  'rgba(255, 206, 86, 0.7)',    // Yellow
+                  'rgba(255, 159, 64, 0.7)',    // Orange
+                  'rgba(199, 199, 199, 0.7)',   // Grey
+                  'rgba(54, 162, 235, 0.7)',    // Blue
+                  'rgba(75, 192, 192, 0.7)',    // Teal
+                  'rgba(153, 102, 255, 0.7)',   // Purple
+                  'rgba(255, 206, 86, 0.7)'     // Yellow
+              ];
+
+              new Chart(ctxPieAll, {
+                  type: 'doughnut',
+                  data: {
+                      labels: pieAllLabels,
+                      datasets: [{
+                          data: pieAllData,
+                          backgroundColor: prevalentCasesColors,
+                          borderColor: '#fff',
+                          borderWidth: 2,
+                          hoverOffset: 30 // Increase slice size on hover
+                      }]
+                  },
+                  plugins: [ChartDataLabels],
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                          legend: {
+                              position: 'right',
+                              labels: {
+                                  boxWidth: 20,
+                                  padding: 15,
+                                  font: {
+                                      size: 14,
+                                      weight: 'bold'
+                                  }
+                              }
+                          },
+                          datalabels: {
+                              color: '#fff',
+                              formatter: (value, context) => {
+                                  const total = context.chart._metasets[context.datasetIndex].total;
+                                  return ((value / total) * 100).toFixed(2) + '%';
+                              },
+                              font: {
+                                  weight: 'bold',
+                                  size: 14
+                              }
+                          },
+                          tooltip: {
+                              callbacks: {
+                                  label: function(context) {
+                                      const label = context.label || '';
+                                      const value = context.parsed || 0;
+                                      return `${label}: ${value}`;
+                                  }
+                              }
+                          }
+                      },
+                      animation: {
+                          animateRotate: true,
+                          animateScale: true
+                      }
+                  }
+              });
+
+              // Doughnut Chart for Cancer Types
+              const pieCancerLabels = {{ pie_cancer_labels | tojson }};
+              const pieCancerData = {{ pie_cancer_data | tojson }};
+              const pieCancerColors = {{ pie_cancer_colors | tojson }};
+              const ctxCancer = document.getElementById('cancerDataChart').getContext('2d');
+
+              // Unique Color Palette for Cancer Data Chart (Warm Tones)
+              const cancerDataColors = [
+                  'rgba(255, 99, 132, 0.7)',    // Red
+                  'rgba(255, 159, 64, 0.7)',    // Orange
+                  'rgba(255, 205, 86, 0.7)',    // Yellow
+                  'rgba(75, 192, 192, 0.7)',    // Teal
+                  'rgba(54, 162, 235, 0.7)',    // Blue
+                  'rgba(153, 102, 255, 0.7)',   // Purple
+                  'rgba(201, 203, 207, 0.7)',   // Grey
+                  'rgba(255, 99, 132, 0.7)',    // Red
+                  'rgba(255, 159, 64, 0.7)',    // Orange
+                  'rgba(255, 205, 86, 0.7)'     // Yellow
+              ];
+
+              new Chart(ctxCancer, {
+                  type: 'doughnut',
+                  data: {
+                      labels: pieCancerLabels,
+                      datasets: [{
+                          data: pieCancerData,
+                          backgroundColor: cancerDataColors,
+                          borderColor: '#fff',
+                          borderWidth: 2,
+                          hoverOffset: 30 // Increase slice size on hover
+                      }]
+                  },
+                  plugins: [ChartDataLabels],
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                          legend: {
+                              position: 'bottom',
+                              labels: {
+                                  boxWidth: 20,
+                                  padding: 15,
+                                  font: {
+                                      size: 14,
+                                      weight: 'bold'
+                                  }
+                              }
+                          },
+                          datalabels: {
+                              color: '#fff',
+                              formatter: (value, context) => {
+                                  const total = context.chart._metasets[context.datasetIndex].total;
+                                  return ((value / total) * 100).toFixed(2) + '%';
+                              },
+                              font: {
+                                  weight: 'bold',
+                                  size: 14
+                              }
+                          },
+                          tooltip: {
+                              callbacks: {
+                                  label: function(context) {
+                                      const label = context.label || '';
+                                      const value = context.parsed || 0;
+                                      return `${label}: ${value}`;
+                                  }
+                              }
+                          }
+                      },
+                      animation: {
+                          animateRotate: true,
+                          animateScale: true
+                      }
+                  }
+              });
+
+              const scatterData = {{ scatter_data | tojson }};
+
+              console.log(scatterData);
+
+              const scatterLabels = scatterData.map(item => item.Population);
+              const scatterIncidence = scatterData.map(item => parseFloat(item['Incidence - ASR (World)']));
+              const scatterMortality = scatterData.map(item => parseFloat(item['Mortality - ASR (World)']));
+
+              // Create an array of colors (you can customize these colors)
+              const colors = scatterData.map(() => {
+                  return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.6)`;
+              });
+
+              const ctxScatter = document.getElementById('scatterPlotChart').getContext('2d');
+              new Chart(ctxScatter, {
+                  type: 'scatter',
+                  data: {
+                      datasets: [{
+                          label: 'Incidence vs Mortality',
+                          data: scatterIncidence.map((x, i) => ({
+                              x: x,
+                              y: scatterMortality[i],
+                              country: scatterData[i].Population, // Include country for tooltip
+                              backgroundColor: colors[i] // Assign color for each point
+                          })),
+                          pointBackgroundColor: colors, // Use the colors array for point background colors
+                          pointBorderColor: colors.map(color => color.replace(/0\.6/, '1')), // Make borders opaque
+                          pointRadius: 5,
+                          pointHoverRadius: 7,
+                          showLine: false,
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      scales: {
+                          x: {
+                              title: {
+                                  display: true,
+                                  text: 'Incidence - ASR (World)'
+                              },
+                              beginAtZero: true
+                          },
+                          y: {
+                              title: {
+                                  display: true,
+                                  text: 'Mortality - ASR (World)'
+                              },
+                              beginAtZero: true
+                          }
+                      },
+                      plugins: {
+                          legend: { display: true },
+                          tooltip: {
+                              callbacks: {
+                                  label: function (context) {
+                                      const label = context.dataset.label || '';
+                                      const incidence = context.raw.x;
+                                      const mortality = context.raw.y;
+                                      const country = context.raw.country; // Get the country from the point data
+                                      return `${label}: Country - ${country}, Incidence - ${incidence}, Mortality - ${mortality}`;
+                                  }
+                              }
+                          }
+                      }
+                  }
+              });
+
+              // ASR Comparison Chart Data
+            const compareData = {{ compare_data | tojson }};
+            const compareLabels = compareData.map(item => item.Label);
+            const asrWorldData = compareData.map(item => parseFloat(item['ASR (World)']));
+            const asrAsiaData = compareData.map(item => parseFloat(item['ASR Asia']));
+
+            // Create the comparison chart
+            const ctxComparison = document.getElementById('comparisonChart').getContext('2d');
+            new Chart(ctxComparison, {
+                type: 'bar',
+                data: {
+                    labels: compareLabels,
+                    datasets: [
+                        {
+                            label: 'ASR (World)',
+                            data: asrWorldData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'ASR (Asia)',
+                            data: asrAsiaData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Cancer Type' }
+                        },
+                        y: {
+                            title: { display: true, text: 'ASR (per 100,000 population)' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'ASR Comparison: World vs Asia' },
+                        legend: { display: true }
+                    }
+                }
+            });
+          };
+    </script>
+    <footer class="footer text-center" style="background-color: #333; color: #fff;">
+        <div class="container p-4">
+            <div class="row">
+                <!-- About Section -->
+                <div class="col-lg-6 col-md-12 mb-4 mb-lg-0 text-lg-start" data-aos="fade-up">
+                    <h5>Cancer Detection System</h5>
+                    <p>
+                        Empowering healthcare professionals with advanced cancer detection tools. 
+                        Your partner in the fight against cancer.
+                    </p>
+                </div>
+    
+                <!-- Links Section -->
+                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0 text-lg-end" data-aos="fade-up" data-aos-delay="100">
+                    <h5 class="text-uppercase">Quick Links</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li>
+                            <a href="/" class="text-light">Home</a>
+                        </li>
+                        <li>
+                            <a href="/doctors" class="text-light">Doctors</a>
+                        </li>
+                        <li>
+                            <a href="/news" class="text-light">Recent Developments</a>
+                        </li>
+                        <li>
+                            <a href="/upload" class="text-light">Upload Files</a>
+                        </li>
+                    </ul>
+                </div>
+    
+                <!-- Contact Section -->
+                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0 text-lg-end" data-aos="fade-up" data-aos-delay="200">
+                    <h5 class="text-uppercase">Contact Us</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li>
+                            <a href="mailto:support@cancer-detection.com" class="text-light"><i class="fas fa-envelope me-2"></i>support@cancer-detection.com</a>
+                        </li>
+                        <li>
+                            <a href="tel:+1234567890" class="text-light"><i class="fas fa-phone me-2"></i>+1 (234) 567-890</a>
+                        </li>
+                        <li>
+                            <a href="https://www.linkedin.com/company/cancer-detection-system" target="_blank" class="text-light"><i class="fab fa-linkedin me-2"></i>LinkedIn</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Footer Bottom -->
+        <div class="bg-dark text-white text-center py-3">
+            © 2024 Cancer Detection System. All rights reserved.
+        </div>
+    </footer>
+  </body>
+</html>
