@@ -1,0 +1,15 @@
+Flask
+requests
+werkzeug
+markdown
+matplotlib
+numpy
+pandas
+keras
+tensorflow
+pillow
+flask-caching
+python-dotenv
+google-generativeai
+beautifulsoup4
+gunicorn
